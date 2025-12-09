@@ -1236,7 +1236,7 @@ class VariableDefinition(VarNode):
         match = self.parse(string)
         self._class = VariableClass.GLOBAL
         self.decl_type = TypeID(match.group('declType'))
-        self.identifier = QualifiedID(match.group('identifier'))
+        self.identifier = IDExpression(match.group('identifier'))
 
 
 class Definition(Node):
@@ -1552,3 +1552,4 @@ def main():
         print(sha256(mangled))
 
 main()
+
