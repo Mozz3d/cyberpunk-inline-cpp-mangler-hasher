@@ -1193,6 +1193,7 @@ class ImplicitPropertyDefinition(VarNode):
         self._class = None
         self.decl_type = None
         self.identifier = ImplicitPropertyID(match.group('identifier'))
+        self.storage_quals = CVQualifierSeq.CONST
     
     def __str__(self) -> str:
         return f'{Keys.CONST} {self.identifier}'
@@ -1217,6 +1218,11 @@ class PropertyDefinition(VarNode):
         self._class = VariableClass(match.group('varClass'))
         self.decl_type = TypeID(match.group('declType'))
         self.identifier = QualifiedID(match.group('identifier'))
+        self.storage_quals = (
+            self.decl_type.ptr_declarator.operator.cv_qualifiers 
+            if self.decl_type.ptr_declarator
+            else self.decl_type.cv_qualifiers
+        )
 
 
 class VariableDefinition(VarNode):
@@ -1236,7 +1242,12 @@ class VariableDefinition(VarNode):
         match = self.parse(string)
         self._class = VariableClass.GLOBAL
         self.decl_type = TypeID(match.group('declType'))
-        self.identifier = IDExpression(match.group('identifier'))
+        self.storage_quals = (
+            self.decl_type.ptr_declarator.operator.cv_qualifiers 
+            if self.decl_type.ptr_declarator
+            else self.decl_type.cv_qualifiers
+        )
+        self.identifier = IDExpression(match.group('identifier')) 
 
 
 class Definition(Node):
@@ -1477,7 +1488,7 @@ class Mangler:
         result += self.mangleCallConvention(func_def.call_conv)
         
         if func_def.isReturnByValue():
-            result += f'?{self.mangleCVQualifiers(func_def.return_type.cv_qualifiers)}'
+            result += '?' + self.mangleCVQualifiers(func_def.return_type.cv_qualifiers)
 
         result += self.mangleTypeID(func_def.return_type)
         
@@ -1509,10 +1520,10 @@ class Mangler:
 
         if var_def.decl_type:
             result += self.mangleTypeID(var_def.decl_type)
-
-        if isinstance(var_def, ImplicitPropertyDefinition):
-            result += 'B'
+            result += 'E'
         
+        result += self.mangleCVQualifiers(var_def.storage_quals)
+
         if var_def.decl_type is None:
             result += '@'
         
@@ -1552,4 +1563,3 @@ def main():
         print(sha256(mangled))
 
 main()
-
